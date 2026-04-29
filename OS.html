@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Windows 12</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #004e8c; background: radial-gradient(circle, #2d7fb9 0%, #032a4d 100%); }
+        
+        #desktop { height: calc(100vh - 40px); width: 100vw; position: relative; overflow: hidden; }
+
+        /* Icons */
+        .icon { width: 85px; position: absolute; text-align: center; color: white; cursor: pointer; padding: 8px; font-size: 12px; z-index: 10; }
+        .icon:hover { background: rgba(255,255,255,0.2); border-radius: 3px; outline: 1px solid rgba(255,255,255,0.3); }
+        .icon img { width: 42px; height: 42px; display: block; margin: 0 auto; pointer-events: none; margin-bottom: 4px; }
+        .rename-input { width: 100%; background: white; color: black; border: 1px solid #005a9e; font-size: 11px; text-align: center; outline: none; user-select: text; }
+
+        /* Window GUI */
+        .window { position: absolute; width: 700px; height: 480px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.4); border-radius: 8px 8px 0 0; box-shadow: 0 20px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; z-index: 100; }
+        .title-bar { padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: move; color: white; font-weight: bold; font-size: 13px; background: rgba(0,0,0,0.1); }
+        .win-ctrls { display: flex; gap: 4px; }
+        .btn { width: 34px; height: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border-radius: 2px; }
+        .close { background: #e81123; } .close:hover { background: #ff0000; }
+        .max, .min { background: rgba(255,255,255,0.15); } .max:hover, .min:hover { background: rgba(255,255,255,0.3); }
+        
+        .win-content { background: #fdfdfd; flex-grow: 1; border-top: 1px solid #999; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+        /* Tabs & Editor UI */
+        .toolbar { background: #e1e1e1; padding: 6px 12px; border-bottom: 1px solid #ccc; display: flex; gap: 8px; align-items: center; }
+        .run-btn { background: #107c10; color: white; border: none; padding: 4px 15px; border-radius: 2px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .tab { padding: 5px 15px; font-size: 11px; cursor: pointer; background: #d0d0d0; border: 1px solid #aaa; border-bottom: none; border-radius: 3px 3px 0 0; margin-top: 5px; }
+        .tab.active { background: #fdfdfd; font-weight: bold; height: 30px; margin-top: 0; border-top: 2px solid #0078d7; }
+
+        textarea { width: 100%; height: 100%; border: none; padding: 12px; resize: none; outline: none; font-family: 'Consolas', monospace; font-size: 14px; user-select: text; }
+        
+        /* Restricted Output Areas */
+        .output-view { width: 100%; height: 100%; display: none; overflow: auto; }
+        .output-view.active { display: block; }
+        .console-area { width: 100%; height: 100%; background: #0c0c0c; color: #00ff00; padding: 15px; font-family: 'Consolas', monospace; white-space: pre-wrap; cursor: default; }
+
+        /* Taskbar */
+        #taskbar { position: fixed; bottom: 0; left: 0; right: 0; height: 40px; background: rgba(0,12,30,0.85); backdrop-filter: blur(15px); display: flex; align-items: center; padding: 0 12px; z-index: 999999; border-top: 1px solid rgba(255,255,255,0.15); }
+        #start-orb { width: 34px; height: 34px; background: url('https://img.icons8.com/color/48/000000/windows-7.png') center/contain no-repeat; cursor: pointer; margin-right: 12px; }
+        #task-items { display: flex; gap: 6px; flex-grow: 1; height: 100%; align-items: center; }
+        .task-tab { background: rgba(255,255,255,0.1); color: white; padding: 0 15px; height: 80%; display: flex; align-items: center; font-size: 11px; cursor: pointer; }
+        .task-tab.active { background: rgba(255,255,255,0.2); border-bottom: 2px solid #3399ff; }
+        .clock { color: white; font-size: 11px; text-align: right; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.2); }
+
+        /* Context Menu */
+        #ctx { position: fixed; background: #fdfdfd; border: 1px solid #979797; display: none; z-index: 10000000; width: 180px; padding: 4px 0; box-shadow: 3px 3px 10px rgba(0,0,0,0.3); }
+        .ctx-item { padding: 6px 20px; font-size: 12px; color: #000; cursor: default; }
+        .ctx-item:hover { background: #3296fa; color: white; }
+    </style>
+</head>
+<body oncontextmenu="return showCtx(event, 'desktop')">
+
+<div id="desktop" onclick="hideMenus()">
+    <div class="icon" style="top:20px; left:20px;" ondblclick="openWin('Computer')">
+        <img src="https://img.icons8.com/color/48/000000/monitor.png"><span>Computer</span>
+    </div>
+
+    <div id="ctx">
+        <div class="ctx-item" onclick="createFile('HTML')">New HTML Game</div>
+        <div class="ctx-item" onclick="createFile('CSharp')">New C# Script</div>
+        <div class="ctx-item" onclick="createFile('Text')">New Text Document</div>
+        <hr style="border:0; border-top:1px solid #ccc; margin:4px 0;">
+        <div id="ctx-rename" class="ctx-item" style="display:none">Rename</div>
+        <div id="ctx-delete" class="ctx-item" style="display:none">Delete</div>
+    </div>
+
+    <div id="taskbar">
+        <div id="start-orb"></div>
+        <div id="task-items"></div>
+        <div class="clock" id="clock"></div>
+    </div>
+</div>
+
+<script>
+    let fs = JSON.parse(localStorage.getItem('w7_dev_fs_v7')) || [];
+    let zIdx = 1000;
+
+    function save() { localStorage.setItem('w7_dev_fs_v7', JSON.stringify(fs)); }
+
+    function updateClock() {
+        const d = new Date();
+        document.getElementById('clock').innerHTML = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + "<br>" + d.toLocaleDateString();
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    function showCtx(e, type, id = null) {
+        e.preventDefault(); e.stopPropagation();
+        const m = document.getElementById('ctx');
+        m.style.display = 'block'; m.style.left = e.clientX+'px'; m.style.top = e.clientY+'px';
+        const isFile = (type === 'file');
+        document.getElementById('ctx-rename').style.display = isFile ? 'block' : 'none';
+        document.getElementById('ctx-delete').style.display = isFile ? 'block' : 'none';
+        if(isFile) {
+            document.getElementById('ctx-rename').onclick = () => startRename(id);
+            document.getElementById('ctx-delete').onclick = () => { fs = fs.filter(x => x.id !== id); save(); document.getElementById(id).remove(); hideMenus(); };
+        }
+    }
+    function hideMenus() { document.getElementById('ctx').style.display = 'none'; }
+
+    function createFile(type) {
+        const id = 'f'+Date.now();
+        let content = '';
+        if(type === 'CSharp') content = 'using System;\n\npublic class Program {\n    public static void Main() {\n        Console.WriteLine("3D Engine Starting...");\n    }\n}';
+        else if(type === 'HTML') content = '<h1>My Custom Game</h1>\n<p>Edit in the editor window and click Run.</p>';
+        else content = 'This is a standard text file.';
+        
+        const f = { id, name: 'New '+type, type, x: 150, y: 150, content };
+        fs.push(f); save(); renderFile(f); hideMenus();
+    }
+
+    function renderFile(f) {
+        const el = document.createElement('div');
+        el.className = 'icon'; el.id = f.id;
+        el.style.left = f.x+'px'; el.style.top = f.y+'px';
+        let iconImg = (f.type === 'Text') ? 'file.png' : 'code.png';
+        el.innerHTML = `<img src="https://img.icons8.com/color/48/000000/${iconImg}"><span>${f.name}</span>`;
+        el.onmousedown = (e) => {
+            if(e.target.tagName === 'INPUT') return;
+            zIdx++; el.style.zIndex = zIdx;
+            let ox = e.clientX-el.offsetLeft, oy = e.clientY-el.offsetTop;
+            document.onmousemove = (ev) => { el.style.left = (ev.clientX-ox)+'px'; el.style.top = (ev.clientY-oy)+'px'; };
+            document.onmouseup = () => { document.onmousemove = null; f.x = parseInt(el.style.left); f.y = parseInt(el.style.top); save(); };
+        };
+        el.ondblclick = () => openWin(f.type, f.id);
+        el.oncontextmenu = (e) => showCtx(e, 'file', f.id);
+        document.getElementById('desktop').appendChild(el);
+    }
+
+    function startRename(id) {
+        hideMenus();
+        const el = document.getElementById(id);
+        const span = el.querySelector('span');
+        const old = span.innerText;
+        span.innerHTML = `<input type="text" class="rename-input" value="${old}">`;
+        const input = span.querySelector('input');
+        input.focus(); input.select();
+        input.onblur = () => { const n = input.value.trim() || old; span.innerText = n; const f = fs.find(x => x.id === id); if(f){f.name=n; save();} };
+        input.onkeydown = (e) => { if(e.key === 'Enter') input.blur(); };
+    }
+
+    function openWin(type, id, extra = '') {
+        zIdx++;
+        const f = fs.find(x => x.id === id) || { name: type, content: extra, type: type };
+        const winId = 'win-'+Date.now();
+        const win = document.createElement('div');
+        win.className = 'window'; win.id = winId; win.style.zIndex = zIdx;
+        win.style.left = (120 + (zIdx % 40)) + 'px'; win.style.top = (80 + (zIdx % 40)) + 'px';
+
+        let body = '';
+        if(type === 'HTML' || type === 'CSharp') {
+            body = `<div class="toolbar"><button class="run-btn" onclick="runScript('${winId}', '${type}')">▶ Run</button></div>
+                    <textarea id="ta-${winId}" oninput="updateContent('${id}', this.value)">${f.content}</textarea>`;
+        } else if (type === 'LiveOutput') {
+            body = `<div class="toolbar" style="gap:0; padding-bottom:0;">
+                        <div class="tab active" onclick="switchOutputTab('${winId}', 'game')">Game View</div>
+                        <div class="tab" onclick="switchOutputTab('${winId}', 'console')">Console</div>
+                    </div>
+                    <div id="game-${winId}" class="output-view active" style="background:#000"></div>
+                    <div id="console-${winId}" class="output-view"><div class="console-area"></div></div>`;
+        } else {
+            body = `<textarea oninput="updateContent('${id}', this.value)">${f.content}</textarea>`;
+        }
+
+        win.innerHTML = `<div class="title-bar" onmousedown="dragWin(event, this.parentElement)"><span>${f.name}</span><div class="win-ctrls"><div class="btn min" onclick="toggleMin('${winId}')">_</div><div class="btn max" onclick="toggleMax('${winId}')">▢</div><div class="btn close" onclick="closeWin('${winId}')">X</div></div></div><div class="win-content">${body}</div>`;
+        document.getElementById('desktop').appendChild(win);
+        addTask(winId, f.name);
+        return winId;
+    }
+
+    function switchOutputTab(winId, tab) {
+        const win = document.getElementById(winId);
+        win.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        win.querySelectorAll('.output-view').forEach(v => v.classList.remove('active'));
+        if(tab === 'game') {
+            win.querySelector('.tab:nth-child(1)').classList.add('active');
+            document.getElementById(`game-${winId}`).classList.add('active');
+        } else {
+            win.querySelector('.tab:nth-child(2)').classList.add('active');
+            document.getElementById(`console-${winId}`).classList.add('active');
+        }
+    }
+
+    function runScript(winId, lang) {
+        const code = document.getElementById(`ta-${winId}`).value;
+        const outWinId = openWin('LiveOutput', null, 'Output');
+        
+        setTimeout(() => {
+            const gameBox = document.getElementById(`game-${outWinId}`);
+            const consoleBox = document.getElementById(`console-${outWinId}`).querySelector('.console-area');
+            consoleBox.innerHTML = `> Initializing ${lang} Runtime...\n`;
+
+            if(lang === 'HTML') {
+                gameBox.innerHTML = `<iframe style="width:100%;height:100%;border:none;background:white;" srcdoc="${code.replace(/"/g, '&quot;')}"></iframe>`;
+                consoleBox.innerHTML += `> Render Success.\n> Listening for virtual DOM events...`;
+            } else {
+                gameBox.innerHTML = `<canvas id="can-${outWinId}" width="680" height="400" style="width:100%;height:100%"></canvas>`;
+                consoleBox.innerHTML += `> 3D Raycaster Engine Loaded.\n> Use WASD to move.`;
+                start3DEngine(outWinId);
+            }
+        }, 150);
+    }
+
+    function start3DEngine(outId) {
+        const canvas = document.getElementById(`can-${outId}`);
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let px=2, py=2, pa=0;
+        const map = [1,1,1,1,1,1,1,1, 1,0,0,0,0,0,0,1, 1,0,1,0,0,1,0,1, 1,0,0,0,0,0,0,1, 1,1,1,1,1,1,1,1];
+        const keys = {};
+        window.onkeydown = e => keys[e.key.toLowerCase()] = true;
+        window.onkeyup = e => keys[e.key.toLowerCase()] = false;
+
+        function loop() {
+            if(!document.getElementById(outId)) return;
+            if(keys['w']){ px+=Math.cos(pa)*0.06; py+=Math.sin(pa)*0.06; }
+            if(keys['s']){ px-=Math.cos(pa)*0.06; py-=Math.sin(pa)*0.06; }
+            if(keys['a']){ pa-=0.05; }
+            if(keys['d']){ pa+=0.05; }
+            ctx.fillStyle='#222'; ctx.fillRect(0,0,680,200); ctx.fillStyle='#444'; ctx.fillRect(0,200,680,200);
+            for(let x=0; x<68; x++) {
+                let rayA = (pa - 0.6) + (x/68)*1.2;
+                let rx = Math.cos(rayA), ry = Math.sin(rayA);
+                let d = 0;
+                while(d < 12) {
+                    d += 0.05;
+                    let cx = Math.floor(px + rx*d), cy = Math.floor(py + ry*d);
+                    if(map[cy*8+cx] === 1) {
+                        let h = 400/d;
+                        ctx.fillStyle = `rgb(0, ${Math.max(0, 200-d*15)}, ${Math.max(0, 255-d*10)})`;
+                        ctx.fillRect(x*10, 200-h/2, 11, h);
+                        break;
+                    }
+                }
+            }
+            requestAnimationFrame(loop);
+        }
+        loop();
+    }
+
+    function updateContent(id, val) { const f = fs.find(x => x.id === id); if(f){f.content=val; save();} }
+    function closeWin(id) { document.getElementById(id).remove(); document.getElementById('t-'+id).remove(); }
+    function toggleMin(id) { document.getElementById(id).style.display = 'none'; }
+    function toggleMax(id) {
+        const w = document.getElementById(id);
+        if(w.style.width === '100%') { w.style.width = '700px'; w.style.height = '480px'; }
+        else { w.style.width = '100%'; w.style.height = 'calc(100vh - 40px)'; w.style.top = '0'; w.style.left = '0'; }
+    }
+
+    function addTask(id, name) {
+        const t = document.createElement('div'); t.className = 'task-tab'; t.id = 't-'+id; t.innerText = name;
+        t.onclick = () => { const w = document.getElementById(id); w.style.display = 'flex'; zIdx++; w.style.zIndex = zIdx; };
+        document.getElementById('task-items').appendChild(t);
+    }
+
+    function dragWin(e, w) {
+        if(e.target.classList.contains('btn')) return;
+        zIdx++; w.style.zIndex = zIdx;
+        let ox = e.clientX-w.offsetLeft, oy = e.clientY-w.offsetTop;
+        document.onmousemove = (ev) => { if(w.style.width !== '100%') { w.style.left = (ev.clientX-ox)+'px'; w.style.top = (ev.clientY-oy)+'px'; } };
+        document.onmouseup = () => document.onmousemove = null;
+    }
+
+    fs.forEach(renderFile);
+</script>
+</body>
+</html>
